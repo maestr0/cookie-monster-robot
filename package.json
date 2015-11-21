@@ -1,11 +1,19 @@
 {
-  "name": "blankapp",
-  "description": "",
-  "version": "0.0.0",
+  "name": "cookie-monster",
+  "description": "Cookie Monster robot",
+  "version": "0.0.1",
   "main": "main.js",
   "engines": {
     "node": ">=0.10.0"
   },
   "dependencies": {
+      "cylon": "latest",
+      "http": "latest",
+      "twit": "latest",
+      "exec-queue": "latest",
+      "winston": "latest",
+      "winston-loggly": "latest",
+      "slack-client": "latest",
+      "mraa": "0.8.1"
   }
 }

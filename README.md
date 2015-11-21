@@ -1,1 +1,2 @@
-Cookie Monster robot built with Intel Edison
+Intel Edison software for Cookie Monster robot
+

@@ -5,5 +5,80 @@
     "currentBuildConfiguration": "Android",
     "projectFiles": {},
     "projectDirectories": {}
+  },
+  "iot-tab": {
+    "fileStatus": {
+      ".gitignore": {
+        "previousModTime": 1446519336000,
+        "modified": 1446519336000,
+        "seen": true,
+        "name": ".gitignore"
+      },
+      "LICENSE": {
+        "previousModTime": 1446519336000,
+        "modified": 1446519336000,
+        "seen": true,
+        "name": "LICENSE"
+      },
+      "README.md": {
+        "previousModTime": 1446519382000,
+        "modified": 1446519382000,
+        "seen": true,
+        "name": "README.md"
+      },
+      "cm_api.js": {
+        "previousModTime": 1446519465000,
+        "modified": 1446519465000,
+        "seen": true,
+        "name": "cm_api.js"
+      },
+      "cookie-monster-robot.xdk": {
+        "previousModTime": 1446524185000,
+        "modified": 1446524185000,
+        "seen": true,
+        "name": "cookie-monster-robot.xdk"
+      },
+      "cookie-monster-robot.xdke": {
+        "previousModTime": 1446528073000,
+        "modified": 1446528073000,
+        "seen": true,
+        "name": "cookie-monster-robot.xdke"
+      },
+      "icon.png": {
+        "previousModTime": 1446519124000,
+        "modified": 1446519124000,
+        "seen": true,
+        "name": "icon.png"
+      },
+      "main.js": {
+        "previousModTime": 1446528129000,
+        "modified": 1446528129000,
+        "seen": true,
+        "name": "main.js"
+      },
+      "package.json": {
+        "previousModTime": 1446526675000,
+        "modified": 1446526675000,
+        "seen": true,
+        "name": "package.json"
+      },
+      "slack_bot.js": {
+        "previousModTime": 1446519516000,
+        "modified": 1446519516000,
+        "seen": true,
+        "name": "slack_bot.js"
+      },
+      "xdk/project-info.json": {
+        "previousModTime": 1446519124000,
+        "modified": 1446519124000,
+        "seen": true,
+        "name": "xdk/project-info.json"
+      }
+    },
+    "boardFileStatus": {
+      "main.js": {
+        "previousModTime": 1446528134430
+      }
+    }
   }
 }

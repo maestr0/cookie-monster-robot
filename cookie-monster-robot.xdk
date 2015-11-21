@@ -138,5 +138,8 @@
       }
     },
     "testDirectory": "test"
+  },
+  "iot-tab": {
+    "arguments": "SLACK_TOKEN=\"xoxb-13361221814-VrEs66XdZILAGyPHvXx2eN7r\""
   }
 }
