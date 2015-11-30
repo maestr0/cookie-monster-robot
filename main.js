@@ -20,6 +20,7 @@ var Config = {
     isUnMuted: true,
     isDevMode: true,
     logLevel: 'debug',
+    scriptLocation: "/home/root/git/intel-edison/",
     startAPI: false,
     scheduler: {
         "mute": "",
@@ -206,14 +207,14 @@ var CM = {
     },
 
     listAudioFiles: function (callback) {
-        var cmd = "ls /home/root/git/intel-edison/audio"
+        var cmd = "ls " + Config.scriptLocation + "audio"
         exec(cmd, function (err, out, code) {
             callback(out);
         });
 
     },
     connectSpeaker: function (callback) {
-        var cmd = "ls /home/root/git/intel-edison/bluetooth_speaker.sh"
+        var cmd = "ls " + Config.scriptLocation + "bluetooth_speaker.sh"
         exec(cmd, function (err, out, code) {
             callback(out);
         });
@@ -287,6 +288,10 @@ var CM = {
             this.blockSoundDetection();
             var audioFile = this.audioQueue.shift();
             this.executeAudioPlayer(audioFile, function (err, out, code) {
+                if (out) my.debug(out);
+                if (err) my.error(err);
+                if (code) my.debug(code);
+
                 my.releaseSoundDetection();
                 setTimeout(my.audioPlayerWorker, Config.audioWorkerInterval);
             });
@@ -344,16 +349,17 @@ var CM = {
 
     runVoiceSynthesizer: function (msg, callback) {
         if (this.isUnMuted) {
-            var cmd = "/home/root/git/intel-edison/speak-cm.sh " + Config.audioVolume + " \"" + msg + "\"";
+            var cmd = Config.scriptLocation + "speak-cm.sh " + Config.audioVolume + " \"" + msg + "\"";
             this.debug("executing: " + cmd);
             exec(cmd, callback);
         }
     },
 
     executeAudioPlayer: function (filename, callback) {
+        // TODO: add check if file exists
         var my = this;
         if (this.isUnMuted) {
-            var cmd = "mplayer -volume " + Config.audioVolume + " /home/root/git/intel-edison/audio/" + filename;
+            var cmd = Config.scriptLocation + "playAudio.sh " + Config.audioVolume + " " + Config.scriptLocation + "audio/" + filename;
             my.debug("executing: " + cmd);
             exec(cmd, callback);
         }
@@ -364,8 +370,14 @@ var CM = {
     },
 
     initScheduler: function () {
-        var j = schedule.scheduleJob('10 * * * * *', function () {
-            console.log('The answer to life, the universe, and everything!');
+        var self = this;
+        // restart at 8AM every day
+        var j = schedule.scheduleJob('0 8 * * *', function () {
+            exec("restart now", function (err, out, code) {
+                if (out) self.debug(out);
+                if (err) self.error(err);
+                if (code) self.debug(code);
+            });
         });
     },
 
@@ -470,6 +482,10 @@ var CM = {
 
     log: function (msg) {
         winston.log('info', msg);
+    },
+
+    error: function (msg) {
+        winston.log('error', msg);
     },
 
     writeMessage: function (message, color) {
