@@ -14,6 +14,7 @@
       "winston": "latest",
       "winston-loggly": "latest",
       "slack-client": "latest",
+      "node-schedule": "latest",
       "mraa": "0.8.1"
   }
 }

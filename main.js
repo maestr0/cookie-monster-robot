@@ -3,6 +3,7 @@ var sys = require('sys');
 var exec = require('exec-queue');
 var http = require('http');
 var Slack = require('slack-client');
+var schedule = require('node-schedule');
 
 var Config = {
     name: "Cookie Monster",
@@ -17,9 +18,15 @@ var Config = {
     audioWorkerBreakDuration: 1000,
     moveDuration: 5900,
     isUnMuted: true,
+    isDevMode: true,
     logLevel: 'debug',
     startAPI: false,
-    audioVolume: 60,
+    scheduler: {
+        "mute": "",
+        "unmute": "",
+        "restart": ""
+    },
+    audioVolume: 2,
     servos: {
         "pins": {
             "head": 15,
@@ -36,17 +43,7 @@ var Config = {
         slackToken: process.env.SLACK_TOKEN,
         autoReconnect: true,
         autoMark: true,
-        commands: {
-            execute: "execute ",
-            mute: "mute",
-            say: "say ",
-            move: "move ",
-            help: "help",
-            audio: "audio",
-            dance: "dance",
-            lunchLunch: "lunch lunch",
-            unmute: "unmute"
-        }
+        adminId: "U026P8Q1D"
     },
     sayings: ["I would do anything for a cookie.",
         "Lunch time. Lunch alert. Lunch alert",
@@ -60,6 +57,7 @@ var CM = {
     audioQueue: [],
     moveQueue: [],
     lcdQueue: [],
+    remoteCommands: [],
     detectSound: 0,
     isUnMuted: Config.isUnMuted,
     slack: new Slack(Config.slack.slackToken, Config.slack.autoReconnect, Config.slack.autoMark),
@@ -74,6 +72,8 @@ var CM = {
         this.initMoveWorker();
         this.initAudioPlayerWorker();
         this.initSlack();
+        this.initScheduler();
+        this.initSlackCommands();
 
         this.beep(700);
         this.beep(200);
@@ -83,68 +83,139 @@ var CM = {
         this.writeMessage("start OK", "blue");
     },
 
-    initServos: function () {
-        // set the frequency to 50hz
-        this.servos.setPWMFreq(50);
-        var position = (50).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max);
-        // center servos
-        this.servos.setPWM(Config.servos.pins.body, 0, position);
-        this.servos.setPWM(Config.servos.pins.head, 0, position);
-        this.servos.setPWM(Config.servos.pins.leftHand, 0, position);
-        this.servos.setPWM(Config.servos.pins.rightHand, 0, position);
-    },
+    initSlackCommands: function () {
 
-    processSlackMessage: function (msg, removePrefix, startWith, channel) {
+        var self = this;
 
-        if (startWith(msg, Config.slack.commands.execute)) {
-            var cmd = removePrefix(msg, Config.slack.commands.execute);
-            exec(cmd, function (err, out, code) {
-                if (out) channel.send(out);
-                if (err) channel.send(err);
-                if (code) channel.send(code);
-            });
-        } else if (msg === Config.slack.commands.mute) {
-            this.writeMessage("Muted", "red");
-            this.isUnMuted = false;
-            channel.send("I will shut up ;(");
-        } else if (msg === Config.slack.commands.dance) {
-            this.dance();
-        } else if (msg === Config.slack.commands.unmute) {
-            this.isUnMuted = true;
-            this.writeMessage("Unmuted", "blue");
-            this.say("Cookies");
-            channel.send(";)");
-        } else if (msg === Config.slack.commands.lunchLunch) {
-            this.say("Lunch, lunch, lunch. Stop working, let's go and eat something!");
-        } else if (startWith(msg, Config.slack.commands.audio)) {
-            var text = removePrefix(msg, Config.slack.commands.audio).trim();
-            if (text) {
-                this.audioQueue.push(text);
-            } else {
-                this.listAudioFiles(channel);
-            }
-        } else if (msg === Config.slack.commands.help) {
+        const ADMIN_ONLY = true;
+        const EVERYONE_CAN_RUN = false;
+        const WITH_PARAMS = true;
+        const NO_PARAMS = false;
+
+        this.bindSlackCommand("mute", "Mute all sounds", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
+            self.writeMessage("Muted", "red");
+            self.isUnMuted = false;
+            callback("I will shut up ;(");
+        });
+
+        this.bindSlackCommand("unmute", "Un-mute all sounds", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
+            self.writeMessage("Un-muted", "blue");
+            self.isUnMuted = true;
+            self.say("Cookies");
+            callback(":)");
+        });
+
+        this.bindSlackCommand("audio list", "List all available audio files", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
+            self.listAudioFiles(callback)
+        });
+
+        this.bindSlackCommand("connect speaker", "Connect BT speaker", NO_PARAMS, ADMIN_ONLY, function (message, callback) {
+            self.connectSpeaker(callback)
+        });
+
+        this.bindSlackCommand("dance", "Let's dance!", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
+            self.dance();
+            callback("Let's dance!");
+        });
+
+        this.bindSlackCommand("lunch lunch", "Cookie time!", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
+            self.say("Lunch, lunch, lunch. Stop working, let's eat some cookies!");
+            callback("I'm hungry. I would eat a cookie.");
+        });
+
+        this.bindSlackCommand("help", "Show available commands", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
             var commands = "";
-            for (cmd in Config.slack.commands) {
-                commands += "\n" + Config.slack.commands[cmd];
+            for (cmd in self.remoteCommands) {
+                var cmd = self.remoteCommands[cmd];
+                commands += "\n`" + cmd.phrase + "` - " + cmd.description + (cmd.admin ? "    `[admin only]`" : "");
             }
-            channel.send("Available commands: " + commands);
-        } else if (startWith(msg, Config.slack.commands.say)) {
-            var text = removePrefix(msg, Config.slack.commands.say);
-            this.say(text);
-        } else if (startWith(msg, Config.slack.commands.move)) {
-            var text = removePrefix(msg, Config.slack.commands.say);
-            this.moveQueue.push(text);
-        }
-        else {
-            channel.send("I don't know what you want ;( ");
-        }
+            callback("Available commands: " + commands);
+        });
+
+        this.bindSlackCommand("execute", "Run shell command", WITH_PARAMS, ADMIN_ONLY, function (message, callback, params) {
+            exec(params, function (err, out, code) {
+                if (out) callback(out);
+                if (err) callback(err);
+                if (code) callback(code);
+            });
+        });
+
+        this.bindSlackCommand("play", "Play audio file", WITH_PARAMS, EVERYONE_CAN_RUN, function (message, callback, params) {
+            self.audioQueue.push(params);
+            callback("Playing " + params);
+        });
+
+        this.bindSlackCommand("say", "Text To Speech", WITH_PARAMS, EVERYONE_CAN_RUN, function (message, callback, params) {
+            self.say(params);
+            callback("Got it!");
+        });
+
+        this.bindSlackCommand("config", "Update config", WITH_PARAMS, ADMIN_ONLY, function (message, callback, params) {
+            var cfg = params.split(" ");
+            Config[cfg[0]] = cfg[1];
+            config("Config updated\n" + JSON.stringify(Config));
+        });
+
+        this.bindSlackCommand("show config", "Show config", NO_PARAMS, ADMIN_ONLY, function (message, callback) {
+            callback("Config:\n" + JSON.stringify(Config));
+        });
+
+        this.bindSlackCommand("move", "Move body. Coma separated list of integers 0-10. DELAY is 0-2000 milliseconds. " +
+            "HEAD, BODY, LEFT_HAND, RIGHT_HAND, DELAY. Example: `move 10,4,8,5,500`", WITH_PARAMS, EVERYONE_CAN_RUN, function (message, callback, params) {
+            self.moveQueue.push(params);
+            callback("Got it!");
+        });
     },
 
-    listAudioFiles: function (channel) {
+    bindSlackCommand: function (phrase, description, withParams, admin, job) {
+        const startWith = function (string, startWith) {
+            return string.substr(0, startWith.length) === startWith;
+        };
+
+        var cmd = {
+            execute: job,
+            phrase: phrase,
+            description: description,
+            admin: admin,
+            isValidCommand: function (msg) {
+                return withParams ? startWith(msg, cmd.phrase) : msg === cmd.phrase;
+            }
+        };
+        this.remoteCommands.push(cmd);
+    },
+
+    processSlackMessage: function (msg, isAdmin, callback) {
+        const removePrefix = function (string, prefix) {
+            return string.substr(prefix.length, string.length).trim();
+        };
+
+        for (var i = 0; i < this.remoteCommands.length; i++) {
+            var command = this.remoteCommands[i];
+            if (command.isValidCommand(msg, isAdmin)) {
+                if (command.admin && isAdmin == false) {
+                    callback("Who you are to give me orders?!");
+                } else {
+                    var params = removePrefix(msg, command.phrase).trim();
+                    command.execute(msg, callback, params);
+                }
+                return;
+            }
+        }
+
+        callback("I don't know what you want ;( Say `help` for help.");
+    },
+
+    listAudioFiles: function (callback) {
         var cmd = "ls /home/root/git/intel-edison/audio"
         exec(cmd, function (err, out, code) {
-            channel.send(out);
+            callback(out);
+        });
+
+    },
+    connectSpeaker: function (callback) {
+        var cmd = "ls /home/root/git/intel-edison/bluetooth_speaker.sh"
+        exec(cmd, function (err, out, code) {
+            callback(out);
         });
 
     },
@@ -153,10 +224,12 @@ var CM = {
         var my = this;
         if (this.moveQueue.length !== 0) {
             var msg = this.moveQueue.shift();
-            this.performMove(msg, function (err, out, code) {
+            this.performMove(msg, function () {
+                // re-schedule worker
                 setTimeout(my.moveWorker, Config.moveWorkerInterval);
             });
         } else {
+            // re-schedule worker
             setTimeout(my.moveWorker, Config.moveWorkerInterval);
         }
     },
@@ -168,10 +241,11 @@ var CM = {
         if (moves && moves.length === 5) {
             my.blockSoundDetection();
             my.debug(moves[0], moves[1], moves[2], moves[3], moves[4]);
-            //this.head.angle(parseInt(moves[0]));
-            //this.body.angle(parseInt(moves[1]));
-            //this.leftHand.angle(parseInt(moves[2]));
-            //this.rightHand.angle(parseInt(moves[3]));
+            this.servos.setPWM(Config.servos.pins.head, 0, (parseInt(moves[0])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.body, 0, (parseInt(moves[1])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.leftHand, 0, (parseInt(moves[2])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.rightHand, 0, (parseInt(moves[3])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+
             setTimeout(function () {
                 my.releaseSoundDetection();
                 callback();
@@ -270,7 +344,7 @@ var CM = {
 
     runVoiceSynthesizer: function (msg, callback) {
         if (this.isUnMuted) {
-            var cmd = "/home/root/git/intel-edison/speak-cm.sh \"" + msg + "\"";
+            var cmd = "/home/root/git/intel-edison/speak-cm.sh " + Config.audioVolume + " \"" + msg + "\"";
             this.debug("executing: " + cmd);
             exec(cmd, callback);
         }
@@ -287,6 +361,12 @@ var CM = {
 
     say: function (msg) {
         this.speechQueue.push(msg);
+    },
+
+    initScheduler: function () {
+        var j = schedule.scheduleJob('10 * * * * *', function () {
+            console.log('The answer to life, the universe, and everything!');
+        });
     },
 
     blockSoundDetection: function () {
@@ -311,20 +391,22 @@ var CM = {
                 messageText.substr(0, userTag.length) === userTag;
         };
 
-        var startWith = function (string, startWith) {
-            return trimmedMessage.substr(0, startWith.length) === startWith;
-        };
-
         var removePrefix = function (string, prefix) {
             return string.substr(prefix.length, string.length).trim();
         };
+
+        function isAdmin() {
+            return message.user.indexOf(Config.slack.adminId) !== -1;
+        }
 
         if (message.text) {
             var channel = this.slack.getChannelGroupOrDMByID(message.channel);
             var trimmedMessage = removePrefix(message.text, makeMention(this.slack.self.id));
 
             if (message.type === 'message' && isDirect(this.slack.self.id, message.text)) {
-                this.processSlackMessage(trimmedMessage, removePrefix, startWith, channel);
+                this.processSlackMessage(trimmedMessage, isAdmin(), function (msg) {
+                    channel.send(msg);
+                });
             }
         }
     },
@@ -381,7 +463,9 @@ var CM = {
     },
 
     debug: function (msg) {
-        winston.log('debug', msg);
+        if (Config.isDevMode) {
+            winston.log('debug', msg);
+        }
     },
 
     log: function (msg) {
@@ -476,6 +560,18 @@ var CM = {
         this.blockSoundDetection();
         this.log("Dance not implemented");
     },
+
+    initServos: function () {
+        // set the frequency to 50hz
+        this.servos.setPWMFreq(50);
+        var position = (50).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max);
+        // center servos
+        this.servos.setPWM(Config.servos.pins.body, 0, position);
+        this.servos.setPWM(Config.servos.pins.head, 0, position);
+        this.servos.setPWM(Config.servos.pins.leftHand, 0, position);
+        this.servos.setPWM(Config.servos.pins.rightHand, 0, position);
+    },
+
 
     initSlack: function () {
         var my = this;
