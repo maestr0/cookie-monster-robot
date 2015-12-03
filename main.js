@@ -109,7 +109,7 @@ var CM = {
             callback(":)");
         });
 
-        this.bindSlackCommand("audio list", "List all available audio files", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
+        this.bindSlackCommand("playlist", "List all available audio files", NO_PARAMS, EVERYONE_CAN_RUN, function (message, callback) {
             self.listAudioFiles(callback)
         });
 
@@ -133,7 +133,16 @@ var CM = {
                 var cmd = self.remoteCommands[cmd];
                 commands += "\n`" + cmd.phrase + "` - " + cmd.description + (cmd.admin ? "    `[admin only]`" : "");
             }
-            callback("Available commands: " + commands);
+            callback("```WARNING!!! every interaction with CM is logged```\n\nAvailable commands: " + commands);
+        });
+
+        this.bindSlackCommand("update audio", "Update audio library from GIT", NO_PARAMS, ADMIN_ONLY, function (message, callback, params) {
+            var cmd = "cd " + Config.scriptLocation + " && git pull";
+            exec(cmd, function (err, out, code) {
+                if (out) callback(out);
+                if (err) callback(err);
+                if (code) callback(code);
+            });
         });
 
         this.bindSlackCommand("execute", "Run shell command", WITH_PARAMS, ADMIN_ONLY, function (message, callback, params) {
@@ -326,13 +335,12 @@ var CM = {
         my.buttonLeft.on('push', function () {
             var item = my.sayings[Math.floor(Math.random() * my.sayings.length)];
             my.beep();
-            my.debug("left button pressed say()");
             my.say(item);
         });
 
         my.buttonRight.on('push', function () {
             my.beep();
-            my.audioQueue.push("cookie!.wav");
+            my.audioQueue.push("cookie");
         });
 
         var ignoreProximityDetection = false;
@@ -366,7 +374,7 @@ var CM = {
 
     runVoiceSynthesizer: function (msg, callback) {
         if (this.isUnMuted) {
-            var cmd = Config.scriptLocation + "speak-cm.sh " + Config.audioVolume + " \"" + msg + "\"";
+            var cmd = Config.scriptLocation + "speak-cm.sh " + Config.audioVolume + " \"" + msg.replace(/"/g, "") + "\"";
             this.debug("executing: " + cmd);
             exec(cmd, callback);
         }
