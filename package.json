@@ -9,7 +9,6 @@
   "dependencies": {
       "cylon": "latest",
       "http": "latest",
-      "twit": "latest",
       "exec-queue": "latest",
       "winston": "latest",
       "winston-loggly": "latest",

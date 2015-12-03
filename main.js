@@ -9,15 +9,18 @@ var Config = {
     name: "Cookie Monster",
     buzzerWorkerInterval: 200,
     buzzerDefaultLength: 200,
-    soundDetectionThreshold: 750,
+    soundDetectionThreshold: 700,
     soundDetectionBreakDuration: 5000,
-    soundDetectionInterval: 500,
+    soundDetectionPauseDuration: 500,
     voiceSynthesizerWorkerInterval: 500,
     moveWorkerInterval: 500,
     audioWorkerInterval: 500,
     audioWorkerBreakDuration: 1000,
     moveDuration: 5900,
     isUnMuted: true,
+    isSoundDetectionEnabled: true,
+    isProximityDetectionEnabled: true,
+    proximityDetectionBreakDuration: 5000,
     isDevMode: true,
     logLevel: 'debug',
     scriptLocation: "/home/root/git/intel-edison/",
@@ -303,8 +306,8 @@ var CM = {
     bind: function () {
         var my = this;
         this.ignoreSoundDetection = false;
-        my.sound.on('analogRead', function (amplitude) {
-            if (my.ignoreSoundDetection === false && (amplitude > Config.soundDetectionThreshold) && my.detectSound < 1 && my.isUnMuted) {
+        my.sound.on("upperLimit", function (amplitude) {
+            if (Config.isSoundDetectionEnabled && my.ignoreSoundDetection === false && my.detectSound === 0) {
                 my.ignoreSoundDetection = true;
                 my.debug("sound amplitude = " + amplitude);
                 my.soundDetected();
@@ -316,7 +319,7 @@ var CM = {
                 my.ignoreSoundDetection = true;
                 setTimeout(function () {
                     my.ignoreSoundDetection = false;
-                }, Config.soundDetectionInterval);
+                }, Config.soundDetectionPauseDuration);
             }
         });
 
@@ -332,7 +335,21 @@ var CM = {
             my.audioQueue.push("cookie!.wav");
         });
 
-        //my.proximity.on('lowerLimit', function (val) {
+        var ignoreProximityDetection = false;
+        my.proximity.on('lowerLimit', function (val) {
+            if (Config.isProximityDetectionEnabled && ignoreProximityDetection === false) {
+                ignoreProximityDetection = true;
+                my.objectWithinRangeAction();
+                setTimeout(function () {
+                    my.debug("reset ignoreProximityDetection");
+                    ignoreProximityDetection = false;
+                }, Config.proximityDetectionBreakDuration);
+            }
+        });
+    },
+
+    objectWithinRangeAction: function () {
+        this.say("you didn't wash your hand");
     },
 
     initMoveWorker: function () {
@@ -560,8 +577,7 @@ var CM = {
             driver: "analog-sensor",
             pin: 1,
             connection: "edison",
-            lowerLimit: 700,
-            upperLimit: 900
+            upperLimit: Config.soundDetectionThreshold
         },
         servos: {
             driver: 'pca9685'
