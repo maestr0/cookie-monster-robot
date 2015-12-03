@@ -378,6 +378,8 @@ var CM = {
             var cmd = Config.scriptLocation + "speak-cm.sh " + Config.audioVolume + " \"" + msg.replace(/"/g, "") + "\"";
             this.debug("executing: " + cmd);
             exec(cmd, callback);
+        } else {
+            callback(null, "Muted", null);
         }
     },
 
@@ -388,6 +390,8 @@ var CM = {
             var cmd = Config.scriptLocation + "playAudio.sh " + Config.audioVolume + " " + Config.scriptLocation + "audio/" + filename;
             my.debug("executing: " + cmd);
             exec(cmd, callback);
+        } else {
+            callback(null, "Muted", null);
         }
     },
 
