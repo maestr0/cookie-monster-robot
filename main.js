@@ -16,7 +16,7 @@ var Config = {
     moveWorkerInterval: 500,
     audioWorkerInterval: 500,
     audioWorkerBreakDuration: 1000,
-    moveDuration: 5900,
+    moveDuration: 300,
     isUnMuted: true,
     isSoundDetectionEnabled: true,
     isProximityDetectionEnabled: true,
@@ -25,6 +25,7 @@ var Config = {
     logLevel: 'debug',
     scriptLocation: "/home/root/git/intel-edison/",
     startAPI: false,
+    dancePlaylist: ["waiting_for_tonight", "coco", "dunalli", "dil_doooba"],
     scheduler: {
         "mute": "",
         "unmute": "",
@@ -133,7 +134,7 @@ var CM = {
                 var cmd = self.remoteCommands[cmd];
                 commands += "\n`" + cmd.phrase + "` - " + cmd.description + (cmd.admin ? "    `[admin only]`" : "");
             }
-            callback("```WARNING!!! every interaction with CM is logged```\n\nAvailable commands: " + commands);
+            callback("```WARNING!!! every interaction with CM is logged. Enjoy ;)```\n\nAvailable commands: " + commands);
         });
 
         this.bindSlackCommand("update audio", "Update audio library from GIT", NO_PARAMS, ADMIN_ONLY, function (message, callback, params) {
@@ -191,7 +192,7 @@ var CM = {
             description: description,
             admin: admin,
             isValidCommand: function (msg) {
-                return withParams ? startWith(msg, cmd.phrase) : msg === cmd.phrase;
+                return withParams ? startWith(msg, cmd.phrase) && msg.trim().length > cmd.phrase : msg === cmd.phrase;
             }
         };
         this.remoteCommands.push(cmd);
@@ -254,10 +255,10 @@ var CM = {
         if (moves && moves.length === 5) {
             my.blockSoundDetection();
             my.debug(moves[0], moves[1], moves[2], moves[3], moves[4]);
-            this.servos.setPWM(Config.servos.pins.head, 0, (parseInt(moves[0])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
-            this.servos.setPWM(Config.servos.pins.body, 0, (parseInt(moves[1])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
-            this.servos.setPWM(Config.servos.pins.leftHand, 0, (parseInt(moves[2])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
-            this.servos.setPWM(Config.servos.pins.rightHand, 0, (parseInt(moves[3])).fromScale(0, 100).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.head, 0, (parseInt(moves[0])).fromScale(0, 10).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.body, 0, (parseInt(moves[1])).fromScale(0, 10).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.leftHand, 0, (parseInt(moves[2])).fromScale(0, 10).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
+            this.servos.setPWM(Config.servos.pins.rightHand, 0, (parseInt(moves[3])).fromScale(0, 10).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
 
             setTimeout(function () {
                 my.releaseSoundDetection();
@@ -598,7 +599,12 @@ var CM = {
 
     dance: function () {
         this.blockSoundDetection();
-        this.log("Dance not implemented");
+        var song = Config.dancePlaylist[Math.floor(Math.random() * Config.dancePlaylist.length)];
+        this.audioQueue.push(song);
+        for (var i = 0; i < 20; i++) {
+            var sequence = (Math.random() * 10) + "," + (Math.random() * 10) + "," + (Math.random() * 10) + "," + (Math.random() * 10) + "," + (Math.random() * 100);
+            this.moveQueue.push(sequence);
+        }
     },
 
     initServos: function () {
