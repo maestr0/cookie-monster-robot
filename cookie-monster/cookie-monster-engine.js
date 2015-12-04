@@ -207,6 +207,11 @@ var CM = {
             this.servos.setPWM(Config.servos.pins.leftHand, 0, (parseInt(moves[2])).fromScale(0, 10).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
             this.servos.setPWM(Config.servos.pins.rightHand, 0, (parseInt(moves[3])).fromScale(0, 10).toScale(Config.servos.ranges.min, Config.servos.ranges.max));
 
+            this.screen.setColor((parseInt(moves[1])).fromScale(0, 10).toScale(0, 255),
+                (parseInt(moves[2])).fromScale(0, 10).toScale(0, 255),
+                (parseInt(moves[3])).fromScale(0, 10).toScale(0, 255));
+            this.screen.clear();
+
             setTimeout(function () {
                 my.releaseSoundDetection();
                 callback();
