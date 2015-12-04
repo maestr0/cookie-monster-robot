@@ -267,20 +267,20 @@ var CM = {
 
     bind: function () {
         var my = this;
-        this.ignoreSoundDetection = false;
+        var ignoreSoundDetection = false;
         my.sound.on("upperLimit", function (amplitude) {
-            if (Config.isSoundDetectionEnabled && my.ignoreSoundDetection === false && my.detectSound === 0) {
-                my.ignoreSoundDetection = true;
+            if (Config.isSoundDetectionEnabled && ignoreSoundDetection === false && my.detectSound === 0) {
+                ignoreSoundDetection = true;
                 my.debug("sound amplitude = " + amplitude);
                 my.soundDetected();
                 setTimeout(function () {
                     my.debug("reset ignoreSoundDetection");
-                    my.ignoreSoundDetection = false;
+                    ignoreSoundDetection = false;
                 }, Config.soundDetectionBreakDuration);
             } else {
                 my.ignoreSoundDetection = true;
                 setTimeout(function () {
-                    my.ignoreSoundDetection = false;
+                    ignoreSoundDetection = false;
                 }, Config.soundDetectionPauseDuration);
             }
         });
@@ -310,7 +310,7 @@ var CM = {
     },
 
     objectWithinRangeAction: function () {
-        this.say("you didn't wash your hand");
+        this.say("you didn't wash your hands");
     },
 
     initMoveWorker: function () {
@@ -432,8 +432,8 @@ var CM = {
 
     soundDetected: function () {
         var my = this;
-        my.writeMessage("Sound detected", "blue");
-        my.say("What is this noise? Stop it.");
+        my.writeMessage("I hear something", "blue");
+        my.say("Stop making noise");
         setTimeout(function () {
             my.clearLCD();
         }, Config.soundDetectionBreakDuration);
