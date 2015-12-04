@@ -311,6 +311,11 @@ var CM = {
 
     objectWithinRangeAction: function () {
         this.say("you didn't wash your hands");
+        this.moveQueue.push("10,6,5,5,300");
+        this.moveQueue.push("0,4,5,5,300");
+        this.moveQueue.push("10,6,5,4,300");
+        this.moveQueue.push("0,2,5,5,500");
+        this.moveQueue.push("5,5,5,5,100");
     },
 
     initMoveWorker: function () {

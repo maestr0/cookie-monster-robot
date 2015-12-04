@@ -12,7 +12,7 @@ var Config = {
     moveDuration: 300,
     isUnMuted: true,
     isSoundDetectionEnabled: true,
-    isProximityDetectionEnabled: true,
+    isProximityDetectionEnabled: false,
     proximityDetectionBreakDuration: 5000,
     isDevMode: true,
     logLevel: 'debug',
@@ -22,9 +22,9 @@ var Config = {
     audioVolume: 2,
     servos: {
         "pins": {
-            "head": 15,
+            "head": 0,
             "body": 3,
-            "leftHand": 0,
+            "leftHand": 15,
             "rightHand": 11
         },
         "ranges": {
